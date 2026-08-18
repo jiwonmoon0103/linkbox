@@ -14,7 +14,13 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { authorize, getClientIp, createSessionToken, sessionCookieOptions } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { normalizeUrl } from '@/lib/url'
-import { ERROR_MESSAGES, SESSION_COOKIE_NAME, type ErrorCode, type Link } from '@/lib/constants'
+import {
+  ERROR_MESSAGES,
+  PAGE_SIZE,
+  SESSION_COOKIE_NAME,
+  type ErrorCode,
+  type Link,
+} from '@/lib/constants'
 
 /** 실패 응답을 한 가지 모양으로 만든다. */
 function fail(code: ErrorCode, status: number) {
@@ -22,6 +28,40 @@ function fail(code: ErrorCode, status: number) {
     { error: { code, message: ERROR_MESSAGES[code] } },
     { status }
   )
+}
+
+/**
+ * 목록 조회 (GET)
+ * 최신순으로 20개씩 돌려주고, 더 남았는지도 함께 알려준다.
+ * 비밀번호 없이 누구나 볼 수 있다. (열람은 공개)
+ *
+ * offset: 건너뛸 개수. "더 보기"를 누를 때마다 20씩 늘려 보낸다.
+ */
+export async function GET(request: NextRequest) {
+  const raw = Number(request.nextUrl.searchParams.get('offset') ?? 0)
+  const offset = Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0
+
+  try {
+    // 한 개를 더 불러와서, 다음 쪽이 남았는지 판단한다.
+    const { data, error } = await db
+      .from('links')
+      .select('*')
+      .order('created_at', { ascending: false })
+      // 같은 순간에 저장된 링크는 created_at이 같아 순서가 흔들린다.
+      // id로 한 번 더 정렬해야 "더 보기"에서 빠지거나 겹치는 링크가 없다.
+      .order('id', { ascending: false })
+      .range(offset, offset + PAGE_SIZE)
+
+    if (error || !data) return fail('SERVER_ERROR', 500)
+
+    const hasMore = data.length > PAGE_SIZE
+    return NextResponse.json({
+      data: (hasMore ? data.slice(0, PAGE_SIZE) : data) as Link[],
+      hasMore,
+    })
+  } catch {
+    return fail('SERVER_ERROR', 500)
+  }
 }
 
 export async function POST(request: NextRequest) {
