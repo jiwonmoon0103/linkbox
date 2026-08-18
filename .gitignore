@@ -32,3 +32,6 @@ next-env.d.ts
 
 # 도구가 생성하는 상태 파일 (커밋 불필요)
 .bkit/
+
+# 개인용 권한 설정 (공유 불필요)
+.claude/settings.local.json
