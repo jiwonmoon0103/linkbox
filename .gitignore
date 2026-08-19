@@ -35,3 +35,6 @@ next-env.d.ts
 
 # 개인용 권한 설정 (공유 불필요)
 .claude/settings.local.json
+
+# Supabase CLI가 만드는 로컬 상태 (연결 정보, 버전 기록)
+supabase/.temp/
