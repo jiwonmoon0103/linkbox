@@ -55,6 +55,62 @@ a {
 }
 
 /* ---------------------------------------------------------------
+   저장 줄 — 주소 입력칸, 비밀번호 칸, 저장 버튼
+   --------------------------------------------------------------- */
+
+.saveRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.saveUrl,
+.savePassword {
+  height: 40px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+}
+
+/* 주소 칸이 남는 자리를 모두 차지한다. */
+.saveUrl {
+  flex: 1;
+  min-width: 200px;
+}
+
+.savePassword {
+  width: 120px;
+}
+
+.saveButton {
+  height: 40px;
+  padding: 0 20px;
+  font-size: 14px;
+  color: var(--color-bg);
+  background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* 저장 중이거나 주소가 비어 있을 때. 눌리지 않는다는 것이 보이게 한다. */
+.saveButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* 안내 문구는 줄 전체를 차지해 아래쪽에 놓인다. */
+.saveMessage {
+  flex-basis: 100%;
+  font-size: 13px;
+  color: var(--color-accent);
+}
+
+/* ---------------------------------------------------------------
    카드 격자
    최소 280px 칸을 채울 수 있는 만큼 나열한다.
    본문이 1080px일 때는 3열이고, 화면이 좁아지면 2열 → 1열로 줄어든다.

@@ -7,9 +7,12 @@
 //
 // 저장 줄은 PLAN 10번, 검색 줄은 PLAN 14번에서 붙인다.
 
+import { cookies } from 'next/headers'
 import LinkCard from '@/components/LinkCard'
+import SaveForm from '@/components/SaveForm'
 import { fetchLinks } from '@/lib/db'
-import { UI_TEXT } from '@/lib/constants'
+import { verifySessionToken } from '@/lib/auth'
+import { SESSION_COOKIE_NAME, UI_TEXT } from '@/lib/constants'
 
 // 링크를 저장하면 바로 목록에 보여야 하므로 요청마다 새로 그린다.
 // 이 줄이 없으면 배포한 뒤 목록이 빌드 시점 상태로 굳는다.
@@ -20,9 +23,19 @@ export default async function Home() {
   // hasMore는 "더 보기" 버튼(PLAN 17번)에서 쓴다.
   const { links } = await fetchLinks()
 
+  // 쿠키는 HttpOnly라 브라우저 스크립트가 읽지 못한다.
+  // 그래서 서버가 확인해 비밀번호 칸을 보여줄지 말지만 알려준다.
+  // 저장 API는 이 값과 무관하게 비밀번호나 쿠키를 다시 직접 확인한다.
+  const cookieStore = await cookies()
+  const hasSession = verifySessionToken(
+    cookieStore.get(SESSION_COOKIE_NAME)?.value
+  )
+
   return (
     <main className="container">
       <h1 className="siteTitle">linkbox</h1>
+
+      <SaveForm hasSession={hasSession} />
 
       {links.length === 0 ? (
         // 저장된 링크가 0개일 때. 검색 결과 0건(PLAN 16번)과는 다른 문구다.
