@@ -12,6 +12,7 @@ import * as cheerio from 'cheerio'
 import {
   FETCH_TIMEOUT_MS,
   MAX_BODY_CHARS,
+  MAX_TITLE_CHARS,
   MIN_BODY_CHARS,
 } from './constants.ts'
 
@@ -66,7 +67,9 @@ export async function fetchPage(url: string): Promise<PageResult> {
   const $ = cheerio.load(html)
 
   // 제목은 페이지의 title을 그대로 쓴다. 비어 있으면 부른 쪽에서 처리한다.
-  const title = $('title').first().text().trim()
+  // 다만 길이는 여기서 자른다. 남이 만든 값이라 얼마든지 길 수 있고,
+  // 이 값이 그대로 AI 요청에 실리기 때문이다.
+  const title = $('title').first().text().trim().slice(0, MAX_TITLE_CHARS)
 
   $(NOISE_SELECTOR).remove()
   // 줄바꿈과 연속 공백을 한 칸으로 눌러 글자 수를 실제 분량에 맞춘다.

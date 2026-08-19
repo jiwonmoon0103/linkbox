@@ -52,6 +52,7 @@
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — 서버 전용
 - `OPENAI_API_KEY` — 서버 전용
 - `ADMIN_PASSWORD` — 저장/삭제 확인용
+- `SESSION_SECRET` — 통과 쿠키 서명 전용 키. `ADMIN_PASSWORD`와 반드시 다른 값을 쓴다. (같은 값을 쓰면 쿠키 하나가 새었을 때 비밀번호를 역산할 수 있다)
 - `SUPABASE_ACCESS_TOKEN`, `VERCEL_TOKEN`, `GITHUB_TOKEN` — 계정 관리용. 앱 코드에서 쓰지 않는다.
 
 ## 저장 처리 규칙 (숫자로 고정된 것)

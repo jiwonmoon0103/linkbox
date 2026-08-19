@@ -27,6 +27,22 @@ function getAdminPassword(): string {
   return password
 }
 
+/**
+ * 쿠키에 서명할 때 쓰는 키. ADMIN_PASSWORD와 반드시 다른 값이다.
+ *
+ * 비밀번호로 서명하면 안 되는 이유
+ *   쿠키 값이 "만료시각.서명" 모양이라, 쿠키 하나만 새면 평문과 그 서명이
+ *   한 쌍으로 넘어간다. 서명 키가 비밀번호면 그 쌍으로 비밀번호를 오프라인에서
+ *   맞혀볼 수 있고, 그때는 5회 차단 규칙이 아무 소용이 없다.
+ */
+function getSessionSecret(): string {
+  const secret = process.env.SESSION_SECRET
+  if (!secret) {
+    throw new Error('.env에 SESSION_SECRET이 없습니다.')
+  }
+  return secret
+}
+
 // ---------------------------------------------------------------
 // 1. 비밀번호 대조
 // ---------------------------------------------------------------
@@ -57,7 +73,7 @@ export function verifyPassword(input: string | undefined | null): boolean {
 // ---------------------------------------------------------------
 
 function sign(payload: string): string {
-  return createHmac('sha256', getAdminPassword()).update(payload).digest('hex')
+  return createHmac('sha256', getSessionSecret()).update(payload).digest('hex')
 }
 
 /** 만료 시각을 담아 서명한 쿠키 값을 만든다. 모양은 "만료시각.서명" */
