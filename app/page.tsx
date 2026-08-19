@@ -9,6 +9,7 @@
 // 이미 불러온 20개 안에서 거르지 않는다. 21번째 이후에 저장한 링크도 찾힌다.
 
 import { cookies } from 'next/headers'
+import Link from 'next/link'
 import LinkCard from '@/components/LinkCard'
 import SaveForm from '@/components/SaveForm'
 import SearchBar from '@/components/SearchBar'
@@ -24,9 +25,11 @@ export const dynamic = 'force-dynamic'
 export default async function Home({ searchParams }: PageProps<'/'>) {
   const params = await searchParams
   const q = typeof params.q === 'string' ? params.q : ''
+  const tag = typeof params.tag === 'string' ? params.tag : ''
 
   // hasMore는 "더 보기" 버튼(PLAN 17번)에서 쓴다.
-  const { links } = await fetchLinks({ q })
+  // 검색어와 태그가 함께 오면 둘 다 만족하는 것만 남는다(AND).
+  const { links } = await fetchLinks({ q, tag })
 
   // 쿠키는 HttpOnly라 브라우저 스크립트가 읽지 못한다.
   // 그래서 서버가 확인해 비밀번호 칸을 보여줄지 말지만 알려준다.
@@ -42,6 +45,16 @@ export default async function Home({ searchParams }: PageProps<'/'>) {
 
       <SaveForm hasSession={hasSession} />
       <SearchBar initialQuery={q} />
+
+      {/* 태그를 눌러 걸러 보는 중이면 무엇으로 거르는지 보여주고 ✕로 푼다. */}
+      {tag && (
+        <p className="selectedTag">
+          선택된 태그: <span className="selectedTagName">#{tag}</span>
+          <Link className="selectedTagClear" href={q ? `/?q=${encodeURIComponent(q)}` : '/'}>
+            ✕ 태그 해제
+          </Link>
+        </p>
+      )}
 
       {links.length === 0 ? (
         // 저장된 링크가 0개일 때. 검색 결과 0건(PLAN 16번)과는 다른 문구다.
@@ -68,7 +81,7 @@ export default async function Home({ searchParams }: PageProps<'/'>) {
       ) : (
         <div className="grid">
           {links.map((link) => (
-            <LinkCard key={link.id} link={link} />
+            <LinkCard key={link.id} link={link} query={q} />
           ))}
         </div>
       )}
