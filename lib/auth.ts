@@ -9,6 +9,9 @@
 //   3) 비밀번호가 맞는가?            → 맞으면 통과하고 새 쿠키를 내려준다
 //   4) 틀렸으면 실패 횟수 +1        → 5회가 되면 10분 차단
 
+// 이 파일이 실수로 브라우저 쪽 코드에 딸려 들어가면 빌드가 바로 깨지게 한다.
+import 'server-only'
+
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { db } from './db.ts'
 import {

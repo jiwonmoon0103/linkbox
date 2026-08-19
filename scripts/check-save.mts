@@ -6,7 +6,7 @@
 //   node scripts/fake-openai.mts
 //
 // 그다음 실행:
-//   node --env-file=.env scripts/check-save.mts
+//   node --conditions=react-server --env-file=.env scripts/check-save.mts
 //
 // 진짜 OpenAI 대신 가짜 서버를 바라보게 하므로 요금이 들지 않는다.
 

@@ -5,6 +5,9 @@
 // service_role 키는 모든 권한을 가지므로 브라우저로 나가면 안 된다.
 // (그래서 환경변수 이름에 NEXT_PUBLIC_ 접두사를 붙이지 않는다)
 
+// 이 파일이 실수로 브라우저 쪽 코드에 딸려 들어가면 빌드가 바로 깨지게 한다.
+import 'server-only'
+
 import { createClient } from '@supabase/supabase-js'
 // lib 안에서는 상대 경로로 가져온다. scripts/의 확인용 스크립트를 node로 직접
 // 실행할 때 '@/' 별칭을 해석하지 못하기 때문이다.

@@ -1,7 +1,7 @@
 // PLAN 11번 확인용 스크립트
 // 페이지 가져오기와 본문 추출이 규칙대로 동작하는지 실제 주소로 확인한다.
 //
-// 실행: node --env-file=.env scripts/check-fetch.mts [주소 ...]
+// 실행: node --conditions=react-server --env-file=.env scripts/check-fetch.mts [주소 ...]
 // 주소를 적지 않으면 아래 기본 목록을 쓴다.
 //   - 정상 페이지, 404, PDF, 영상처럼 결과가 갈리는 것들을 섞어 두었다.
 

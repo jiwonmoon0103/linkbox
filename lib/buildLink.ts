@@ -11,6 +11,9 @@
 //
 // 어느 갈래든 URL과 제목은 반드시 남는다. 요약을 지어내지 않는다.
 
+// 이 파일이 실수로 브라우저 쪽 코드에 딸려 들어가면 빌드가 바로 깨지게 한다.
+import 'server-only'
+
 import { fetchPage } from './fetchPage.ts'
 import { summarize } from './ai.ts'
 import { titleFromUrl } from './url.ts'

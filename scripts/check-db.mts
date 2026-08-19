@@ -1,6 +1,6 @@
 // PLAN 3번 확인용 스크립트
 // 서버 쪽 코드(lib/db.ts)로 실제 테이블 조회가 되는지 눈으로 확인한다.
-// 실행: node --env-file=.env scripts/check-db.mts
+// 실행: node --conditions=react-server --env-file=.env scripts/check-db.mts
 
 import { db } from '../lib/db.ts'
 

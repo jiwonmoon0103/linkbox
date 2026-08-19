@@ -8,6 +8,9 @@
 //   - 본문은 앞에서부터 5,000자까지만 쓴다
 //   - 본문이 200자 미만이면 AI를 부르지 않는다고 알린다
 
+// 이 파일이 실수로 브라우저 쪽 코드에 딸려 들어가면 빌드가 바로 깨지게 한다.
+import 'server-only'
+
 import * as cheerio from 'cheerio'
 import { lookup } from 'node:dns/promises'
 import { isIP } from 'node:net'

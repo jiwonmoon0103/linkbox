@@ -3,8 +3,8 @@
 // 저장 화면은 PLAN 10번이라 아직 없으므로, 여기서 테스트용 줄을 직접 넣고 지운다.
 //
 // 실행:
-//   node --env-file=.env scripts/check-list.mts seed 5   (테스트 링크 5건 넣기)
-//   node --env-file=.env scripts/check-list.mts clean     (테스트 링크 전부 지우기)
+//   node --conditions=react-server --env-file=.env scripts/check-list.mts seed 5   (테스트 링크 5건 넣기)
+//   node --conditions=react-server --env-file=.env scripts/check-list.mts clean     (테스트 링크 전부 지우기)
 //
 // 테스트 링크는 주소가 https://check-list.example/... 로 시작해서 구분한다.
 

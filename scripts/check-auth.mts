@@ -1,6 +1,6 @@
 // PLAN 5번 확인용 스크립트
 // 비밀번호 확인, 서명 쿠키, 5회 실패 차단이 실제로 도는지 눈으로 확인한다.
-// 실행: node --env-file=.env scripts/check-auth.mts
+// 실행: node --conditions=react-server --env-file=.env scripts/check-auth.mts
 //
 // 테스트 IP는 문서용으로 예약된 주소(203.0.113.x)를 쓰고, 끝나면 기록을 지운다.
 

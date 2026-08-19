@@ -1,11 +1,11 @@
 // PLAN 12번 확인용 스크립트
 //
 // 실행:
-//   node --env-file=.env scripts/check-ai.mts
+//   node --conditions=react-server --env-file=.env scripts/check-ai.mts
 //     → 돈이 들지 않는 부분만 확인한다. 모델이 규칙을 어긴 답을 줬다고 가정하고,
 //       저장되는 값이 규칙대로 잘리는지 본다.
 //
-//   node --env-file=.env scripts/check-ai.mts --live <주소>
+//   node --conditions=react-server --env-file=.env scripts/check-ai.mts --live <주소>
 //     → 실제로 AI를 1회 부른다. (요금이 든다. 한 번에 1건만 부른다)
 
 import { trimSummary, trimTags, summarize } from '../lib/ai.ts'
