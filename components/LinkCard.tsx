@@ -17,7 +17,11 @@
 // 카드마다 확인창을 두지 않고 한 개를 돌려 쓴다.
 
 import Link from 'next/link'
-import type { Link as LinkItem } from '@/lib/constants'
+import {
+  SUMMARY_FULL_VIEW_CHARS,
+  UI_TEXT,
+  type Link as LinkItem,
+} from '@/lib/constants'
 
 /**
  * 저장 시각을 한국 시간(Asia/Seoul) 기준 `2026-08-18` 형태로 만든다.
@@ -37,13 +41,18 @@ export default function LinkCard({
   link,
   query = '',
   onDeleteClick,
+  onMoreClick,
 }: {
   link: LinkItem
   /** 지금 걸려 있는 검색어. 태그를 눌러도 검색어는 유지된다. (두 조건 AND) */
   query?: string
   /** 삭제 버튼을 눌렀을 때. 확인창은 목록이 띄운다. */
   onDeleteClick: (link: LinkItem) => void
+  /** 전체 보기 버튼을 눌렀을 때. 창은 목록이 띄운다. */
+  onMoreClick: (link: LinkItem) => void
 }) {
+  // 요약이 길면 카드에서 3줄로 잘린다. 그때만 전체 보기 버튼을 보여준다.
+  const 요약이길다 = link.summary.length > SUMMARY_FULL_VIEW_CHARS
   function tagHref(tag: string): string {
     const params = new URLSearchParams()
     if (query) params.set('q', query)
@@ -78,14 +87,26 @@ export default function LinkCard({
         </div>
         <div className="cardBottom">
           <p className="cardDate">{formatDate(link.created_at)}</p>
-          <button
-            className="cardDelete"
-            type="button"
-            onClick={() => onDeleteClick(link)}
-            aria-label={`${link.title || link.url} 삭제`}
-          >
-            삭제
-          </button>
+          <div className="cardActions">
+            {요약이길다 && (
+              <button
+                className="cardMore"
+                type="button"
+                onClick={() => onMoreClick(link)}
+                aria-label={`${link.title || link.url} 요약 ${UI_TEXT.viewSummary}`}
+              >
+                {UI_TEXT.viewSummary}
+              </button>
+            )}
+            <button
+              className="cardDelete"
+              type="button"
+              onClick={() => onDeleteClick(link)}
+              aria-label={`${link.title || link.url} 삭제`}
+            >
+              삭제
+            </button>
+          </div>
         </div>
       </div>
     </article>

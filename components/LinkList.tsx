@@ -57,6 +57,11 @@ export default function LinkList({
   // 이번 화면에서 비밀번호를 통과했는지. 서버가 쿠키를 내려주면 다시 묻지 않는다.
   const [passed, setPassed] = useState(hasSession)
 
+  // 요약 전체 보기 창. viewing이 있으면 열려 있다.
+  // 카드 높이를 모두 같게 고정한다는 규칙(CLAUDE.md) 때문에 카드 안에서 펼치지 않고
+  // 삭제 확인창과 같은 방식으로 띄운다. 격자가 흐트러지지 않는다.
+  const [viewing, setViewing] = useState<Link | null>(null)
+
   function askDelete(link: Link) {
     setPending(link)
     setPassword('')
@@ -141,6 +146,7 @@ export default function LinkList({
             link={link}
             query={query}
             onDeleteClick={askDelete}
+            onMoreClick={setViewing}
           />
         ))}
       </div>
@@ -160,6 +166,35 @@ export default function LinkList({
               {loadError}
             </p>
           )}
+        </div>
+      )}
+
+      {/* 요약 전체 보기 창. 카드에서 3줄로 잘린 요약을 전부 보여준다. */}
+      {viewing && (
+        <div className="dialogBack" onClick={() => setViewing(null)}>
+          {/* 창 안을 눌렀을 때는 닫히지 않게 한다. 바깥을 눌러야 닫힌다. */}
+          <div
+            className="dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label={UI_TEXT.summaryTitle}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="dialogText">{viewing.title || viewing.url}</p>
+            {/* 문장 사이 줄바꿈을 살려서 보여준다. 저장할 때 \n으로 이어붙였다. */}
+            <p className="dialogSummary">{viewing.summary}</p>
+
+            <div className="dialogButtons">
+              <button
+                className="dialogCancel"
+                type="button"
+                onClick={() => setViewing(null)}
+                autoFocus
+              >
+                {UI_TEXT.close}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
