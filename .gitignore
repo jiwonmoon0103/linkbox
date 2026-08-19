@@ -38,3 +38,6 @@ next-env.d.ts
 
 # Supabase CLI가 만드는 로컬 상태 (연결 정보, 버전 기록)
 supabase/.temp/
+
+.vercel
+.env*
