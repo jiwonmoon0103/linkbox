@@ -14,6 +14,7 @@ import 'server-only'
 import * as cheerio from 'cheerio'
 import { lookup } from 'node:dns/promises'
 import { isIP } from 'node:net'
+import { fetchYouTubeVideo, parseYouTubeVideoId } from './youtube.ts'
 import {
   FETCH_TIMEOUT_MS,
   MAX_BODY_CHARS,
@@ -169,7 +170,24 @@ const NOISE_SELECTOR = 'script, style, noscript, nav, header, footer, aside, ifr
 
 export async function fetchPage(url: string): Promise<PageResult> {
   // 15초는 전체에 대한 제한이다. 주소를 따라 여러 번 옮겨가도 늘어나지 않는다.
+  // 유튜브 창구를 거쳐 오는 경우에도 같은 제한을 나눠 쓴다.
   const signal = AbortSignal.timeout(FETCH_TIMEOUT_MS)
+
+  // 유튜브 영상만 자료를 얻는 창구가 다르다. (lib/youtube.ts에 이유를 적어 두었다)
+  // 물어보지 못했으면 아래 일반 경로로 그대로 내려간다.
+  const videoId = parseYouTubeVideoId(url)
+  if (videoId) {
+    const video = await fetchYouTubeVideo(videoId, signal)
+    if (video) {
+      // 영상 설명이 본문이다. 5,000자 자르기와 200자 판정은 일반 페이지와 똑같이 건다.
+      return {
+        ok: true,
+        title: video.title.slice(0, MAX_TITLE_CHARS),
+        text: video.description.slice(0, MAX_BODY_CHARS),
+        tooShort: video.description.length < MIN_BODY_CHARS,
+      }
+    }
+  }
 
   let response: Response
   let currentUrl = url

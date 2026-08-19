@@ -39,6 +39,9 @@ linkbox는 저장하는 순간 페이지를 읽어 **3줄 요약과 태그 3개*
 - **Supabase (PostgreSQL)** — 링크 저장. RLS를 켜고 **서버 전용 키로만** 접근
 - **OpenAI gpt-4o-mini** — 요약과 태그 생성
 - **cheerio** — 웹페이지에서 본문만 추출
+- **YouTube Data API v3** — 유튜브 영상의 제목과 설명 (아래 참고)
+
+유튜브만 자료를 얻는 창구가 다릅니다. 배포한 서버가 유튜브 페이지를 직접 읽으면 영상 정보가 빠진 껍데기가 와서, 제목이 `- YouTube`가 되고 요약에 유튜브 홈 소개문이 들어갑니다. 개인 PC에서는 멀쩡해서 한동안 드러나지 않았습니다. 그래서 유튜브 주소일 때만 공식 창구에 물어봅니다.
 
 브라우저는 데이터베이스에 직접 접속하지 않습니다. 읽기와 쓰기 모두 서버 코드(Route Handler)를 거칩니다.
 
@@ -59,6 +62,7 @@ lib/
   constants.ts            고정 숫자와 문구 (규칙이 사는 곳)
   db.ts                   Supabase 연결과 목록·검색 질의
   fetchPage.ts            페이지 가져오기 + 본문 추출
+  youtube.ts              유튜브 주소 판별 + 공식 창구 호출
   ai.ts                   요약·태그 생성
   buildLink.ts            저장할 한 줄 만들기
   auth.ts                 비밀번호 확인, 서명 쿠키, 5회 실패 차단
@@ -87,9 +91,12 @@ supabase/migrations/      DB 구조
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 OPENAI_API_KEY=
+YOUTUBE_API_KEY=
 ADMIN_PASSWORD=
 SESSION_SECRET=
 ```
+
+`YOUTUBE_API_KEY`는 없어도 앱이 돌아갑니다. 유튜브 링크만 일반 페이지처럼 처리됩니다.
 
 ```bash
 npm install
