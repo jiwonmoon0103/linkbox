@@ -66,3 +66,17 @@ export function normalizeUrl(input: string | undefined | null): NormalizeResult 
 
   return { ok: true, url: parsed.toString() }
 }
+
+/**
+ * 페이지를 아예 읽지 못해 제목이 없을 때 쓸 제목을 만든다.
+ * 정규화된 주소의 호스트와 경로를 그대로 쓴다. (PRD.md 5번 1))
+ * 이 경우 AI를 부르지 않으므로 제목을 지어내지 않는다.
+ */
+export function titleFromUrl(url: string): string {
+  try {
+    const parsed = new URL(url)
+    return parsed.host + parsed.pathname + parsed.search
+  } catch {
+    return url
+  }
+}

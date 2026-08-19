@@ -14,6 +14,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { authorize, getClientIp, createSessionToken, sessionCookieOptions } from '@/lib/auth'
 import { db, fetchLinks } from '@/lib/db'
 import { normalizeUrl } from '@/lib/url'
+import { buildLink } from '@/lib/buildLink'
 import {
   ERROR_MESSAGES,
   SESSION_COOKIE_NAME,
@@ -93,10 +94,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 4) 저장 — 지금은 제목, 요약, 태그를 비워둔다. (AI는 아직 붙이지 않음)
+    // 4) 페이지를 가져와 요약과 태그를 만든다.
+    const prepared = await buildLink(normalized.url)
+
+    // 5) 저장 — 요약에 실패해도 URL과 제목은 남는다.
     const { data: created, error } = await db
       .from('links')
-      .insert({ url: normalized.url, title: '', summary: '', tags: [] })
+      .insert(prepared)
       .select('*')
       .single()
 
