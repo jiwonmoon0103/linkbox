@@ -4,10 +4,11 @@
 // "언제 AI를 부르고, 못 부를 때 무엇을 저장하는가"를 여기 한 곳에 모은다.
 // 링크 1건당 AI 호출은 아래 마지막 갈래에서 딱 1회뿐이다.
 //
-// 세 갈래로 끝난다.
+// 세 갈래로 끝난다. 어느 갈래를 타든 AI 호출은 1회를 넘지 않는다.
 //   - 페이지를 읽지 못함 (404, 15초 초과 등) → "요약 실패", AI 부르지 않음
-//   - 본문이 200자 미만 (영상, PDF 등)       → "요약 없음", AI 부르지 않음
-//   - 그 밖                                  → AI 1회 호출
+//   - 본문이 200자 미만 (PDF, 쇼핑몰 등)     → "요약 없음". 제목이 있으면
+//                                              제목만으로 태그 1회 (요약은 요청 안 함)
+//   - 그 밖                                  → 요약·태그·제목을 1회에 함께 받음
 //
 // 어느 갈래든 URL과 제목은 반드시 남는다. 요약을 지어내지 않는다.
 
@@ -15,7 +16,7 @@
 import 'server-only'
 
 import { fetchPage } from './fetchPage.ts'
-import { summarize } from './ai.ts'
+import { summarize, tagsFromTitle } from './ai.ts'
 import { titleFromUrl } from './url.ts'
 import {
   MAX_TITLE_CHARS,
@@ -46,14 +47,31 @@ export async function buildLink(url: string): Promise<NewLink> {
     }
   }
 
-  // 영상, PDF, 이미지처럼 뽑아낼 본문이 거의 없는 경우.
-  // 껍데기 글자만 보고 요약을 지어내지 않는다.
+  // PDF, 이미지 위주 페이지, 자바스크립트로 그리는 쇼핑몰처럼
+  // 뽑아낼 본문이 거의 없는 경우. 껍데기 글자로 요약을 지어내지 않는다.
+  //
+  // 다만 제목이 있으면 그것만으로 태그는 받는다. (PRD.md 5번 1))
+  // 태그가 없으면 이런 링크는 태그 필터에 영영 걸리지 않아 쌓이기만 한다.
+  // 요약은 요청하지 않으므로 지어낸 문장이 들어올 여지가 없다.
   if (page.tooShort) {
+    let tags: string[] = []
+
+    // 제목이 없으면(PDF 등) 태그를 뽑을 근거가 없으니 AI를 부르지 않는다.
+    if (page.title) {
+      try {
+        // 이 갈래에서 AI 호출은 여기 1회뿐이다. 아래 요약 갈래와는 배타적이다.
+        tags = await tagsFromTitle(page.title)
+      } catch {
+        // 태그를 못 받아도 저장은 한다. 다시 부르지 않는다.
+        tags = []
+      }
+    }
+
     return {
       url,
       title: trimTitle(page.title || titleFromUrl(url)),
       summary: SUMMARY_NONE,
-      tags: [],
+      tags,
     }
   }
 
