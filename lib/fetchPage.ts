@@ -15,6 +15,7 @@ import {
   FETCH_TIMEOUT_MS,
   MAX_BODY_CHARS,
   MAX_REDIRECTS,
+  MAX_RESPONSE_BYTES,
   MAX_TITLE_CHARS,
   MIN_BODY_CHARS,
 } from './constants.ts'
@@ -117,6 +118,49 @@ export type PageResult =
 // 브라우저가 아닌 곳에서 온 요청을 막는 사이트가 있어 이름을 밝혀 둔다.
 const USER_AGENT = 'Mozilla/5.0 (compatible; linkbox/1.0)'
 
+/**
+ * 응답을 MAX_RESPONSE_BYTES까지만 읽는다.
+ *
+ * response.text()를 그냥 부르면 상대가 보내는 만큼 다 받는다.
+ * 끝없이 쏟아내는 주소를 만나면 15초 동안 받은 것이 전부 메모리에 쌓이고
+ * (실측 500MB) 그것을 다시 파싱하다 서버가 죽는다.
+ *
+ * 그래서 조금씩 읽으면서 상한을 넘으면 거기서 끊는다.
+ * 넘겨서 끊긴 경우에도 그때까지 받은 것으로 제목과 본문을 뽑는다.
+ * 앞부분만 있어도 title과 본문 앞 5,000자를 얻는 데는 대개 충분하기 때문이다.
+ */
+async function readCapped(response: Response): Promise<string> {
+  // 크기를 미리 알려주면 받아보기도 전에 판단한다.
+  const declared = Number(response.headers.get('content-length'))
+  if (Number.isFinite(declared) && declared > MAX_RESPONSE_BYTES) {
+    throw new Error('응답이 너무 큽니다.')
+  }
+
+  const body = response.body
+  if (!body) return ''
+
+  const reader = body.getReader()
+  const chunks: Uint8Array[] = []
+  let received = 0
+
+  try {
+    while (received < MAX_RESPONSE_BYTES) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (!value) continue
+      chunks.push(value)
+      received += value.byteLength
+    }
+  } finally {
+    // 상한에 걸려 멈췄으면 남은 것은 받지 않고 연결을 끊는다.
+    await reader.cancel().catch(() => {})
+  }
+
+  return new TextDecoder('utf-8').decode(
+    chunks.length === 1 ? chunks[0] : Buffer.concat(chunks)
+  )
+}
+
 /** 본문에서 걷어낼 부분. 메뉴와 광고 글자가 요약에 섞이면 안 된다. */
 const NOISE_SELECTOR = 'script, style, noscript, nav, header, footer, aside, iframe, svg, form'
 
@@ -185,7 +229,7 @@ export async function fetchPage(url: string): Promise<PageResult> {
 
   let html: string
   try {
-    html = await response.text()
+    html = await readCapped(response)
   } catch {
     return { ok: false }
   }
