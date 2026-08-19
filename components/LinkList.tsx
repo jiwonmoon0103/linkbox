@@ -32,6 +32,20 @@ export default function LinkList({
   const [hasMore, setHasMore] = useState(initialHasMore)
   const [loading, setLoading] = useState(false)
 
+  // 서버가 목록을 다시 그려 보내면 그것으로 맞춘다.
+  // 링크를 저장한 뒤 SaveForm이 화면을 새로 그리게 하는데(router.refresh),
+  // 이 맞춤이 없으면 브라우저가 들고 있던 옛 목록이 그대로 남아
+  // 새로 저장한 카드가 맨 앞에 나타나지 않는다. (DESIGN.md 3.1)
+  //
+  // 서버가 다시 그릴 때만 새 배열이 오므로, 브라우저 안에서 상태만 바뀔 때는
+  // 여기가 동작하지 않는다. ("더 보기"로 이어붙인 것이 헛되이 지워지지 않는다)
+  const [syncedFrom, setSyncedFrom] = useState(initialLinks)
+  if (syncedFrom !== initialLinks) {
+    setSyncedFrom(initialLinks)
+    setLinks(initialLinks)
+    setHasMore(initialHasMore)
+  }
+
   // 삭제 확인창 상태. pending이 있으면 확인창이 열려 있다.
   const [pending, setPending] = useState<Link | null>(null)
   const [password, setPassword] = useState('')
