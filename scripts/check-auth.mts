@@ -8,9 +8,11 @@ import {
   authorize,
   clearFailures,
   createSessionToken,
+  hashIp,
   verifyPassword,
   verifySessionToken,
 } from '../lib/auth.ts'
+import { db } from '../lib/db.ts'
 import { SESSION_TTL_MS } from '../lib/constants.ts'
 
 const TEST_IP = '203.0.113.99'
@@ -53,7 +55,17 @@ for (let i = 1; i <= 4; i++) {
 check('5회째 → 차단', await authorize({ ip: TEST_IP, password: WRONG, now }), { ok: false, code: 'BLOCKED' })
 check('차단 중에는 맞는 비밀번호도 거절', await authorize({ ip: TEST_IP, password: RIGHT, now }), { ok: false, code: 'BLOCKED' })
 check('차단 중에는 유효한 쿠키도 거절', await authorize({ ip: TEST_IP, token, now }), { ok: false, code: 'BLOCKED' })
-check('10분 뒤에는 다시 통과', await authorize({ ip: TEST_IP, password: RIGHT, now: now + 10 * 60 * 1000 + 1 }), { ok: true, issueCookie: true })
+// 차단 해제 시각은 DB가 정한다. (record_failure 함수)
+// 스크립트가 시작한 시각에 10분을 더해 짐작하면, 그 사이에 흐른 시간만큼
+// 실제 해제 시각보다 이르게 잡혀 아직 차단 중으로 나온다.
+// 그래서 저장된 값을 읽어 그 직후를 쓴다.
+const { data: 기록 } = await db
+  .from('login_attempts')
+  .select('blocked_until')
+  .eq('ip_hash', hashIp(TEST_IP))
+  .maybeSingle()
+const 해제직후 = new Date(기록!.blocked_until).getTime() + 1
+check('차단이 풀린 뒤에는 다시 통과', await authorize({ ip: TEST_IP, password: RIGHT, now: 해제직후 }), { ok: true, issueCookie: true })
 
 await clearFailures(TEST_IP)
 console.log(`\n테스트 기록 정리 완료. ${failed === 0 ? '전부 통과 ✅' : `실패 ${failed}건 ❌`}`)

@@ -12,6 +12,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { db } from './db.ts'
 import {
+  ATTEMPT_RETENTION_DAYS,
   BLOCK_DURATION_MS,
   MAX_FAILED_ATTEMPTS,
   SESSION_COOKIE_NAME,
@@ -121,7 +122,23 @@ export function getClientIp(headers: Headers): string {
   return headers.get('x-real-ip') ?? 'unknown'
 }
 
-/** 지금 차단 중인 IP인지 확인한다. */
+/**
+ * IP를 되돌릴 수 없는 값으로 바꾼다. DB에는 이 값만 저장한다.
+ *
+ * IP는 다른 정보와 합치면 개인을 알아볼 수 있어 통상 개인정보로 다룬다.
+ * 차단 기능에 필요한 것은 "같은 접속자인가"뿐이고, 그건 이 값으로 충분하다.
+ * 같은 IP는 늘 같은 값이 나오지만, 저장된 값에서 IP를 되찾을 수는 없다.
+ * (PRD.md 7번)
+ */
+export function hashIp(ip: string): string {
+  return createHmac('sha256', getSessionSecret()).update(ip).digest('hex')
+}
+
+/**
+ * 지금 차단 중인 접속자인지 확인한다.
+ * 부르는 쪽은 IP를 그대로 넘기고, 변환은 여기서 한다.
+ * 그래야 DB에 IP가 새어 들어가는 경로가 생기지 않는다.
+ */
 export async function isBlocked(
   ip: string,
   now: number = Date.now()
@@ -129,7 +146,7 @@ export async function isBlocked(
   const { data } = await db
     .from('login_attempts')
     .select('blocked_until')
-    .eq('ip', ip)
+    .eq('ip_hash', hashIp(ip))
     .maybeSingle()
 
   if (!data?.blocked_until) return false
@@ -143,19 +160,21 @@ export async function isBlocked(
  * 요청이 동시에 올 때 전부 같은 값을 읽어 횟수가 제대로 오르지 않는다.
  * (실제로 30번을 한꺼번에 틀려도 4까지밖에 오르지 않았다)
  *
- * 5회와 10분은 여기 상수에서 넘긴다. SQL에 또 적으면 두 곳이 어긋난다.
+ * 5회와 10분, 보관 기간은 여기 상수에서 넘긴다. SQL에 또 적으면 두 곳이 어긋난다.
+ * 같은 호출에서 오래된 기록도 함께 지워지므로 따로 예약 작업을 두지 않는다.
  */
 export async function recordFailure(ip: string): Promise<void> {
   await db.rpc('record_failure', {
-    p_ip: ip,
+    p_ip_hash: hashIp(ip),
     p_max_attempts: MAX_FAILED_ATTEMPTS,
     p_block_seconds: BLOCK_DURATION_MS / 1000,
+    p_retention_days: ATTEMPT_RETENTION_DAYS,
   })
 }
 
 /** 비밀번호를 맞혔을 때 실패 기록을 지운다. */
 export async function clearFailures(ip: string): Promise<void> {
-  await db.from('login_attempts').delete().eq('ip', ip)
+  await db.from('login_attempts').delete().eq('ip_hash', hashIp(ip))
 }
 
 // ---------------------------------------------------------------
