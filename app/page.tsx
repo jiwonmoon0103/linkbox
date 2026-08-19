@@ -1,69 +1,58 @@
 // 화면 1개 (저장 줄 + 검색 줄 + 카드 격자)
-// 근거: DESIGN.md 2번 화면 구성
+// 근거: DESIGN.md 2번 화면 구성, 3.2 목록 보기
 //
-// 지금은 PLAN 8번(카드 컴포넌트와 격자 레이아웃)까지만 만든 상태다.
-// 아래 SAMPLE_LINKS는 격자가 3열 → 2열 → 1열로 줄어드는지, 카드 높이가
-// 같은지 눈으로 확인하기 위한 임시 데이터이며 PLAN 9번에서 DB 조회로 바꾼다.
-// 저장 줄과 검색 줄은 PLAN 10번, 14번에서 붙인다.
+// 첫 화면은 서버 컴포넌트가 lib/db.ts로 DB를 직접 읽어 최신순 20개를 그린다.
+// 브라우저가 Supabase에 직접 붙지 않으므로 서버 전용 키가 밖으로 나가지 않는다.
+// "더 보기"(PLAN 17번)부터는 GET /api/links로 그다음 20개를 가져온다.
+//
+// 저장 줄은 PLAN 10번, 검색 줄은 PLAN 14번에서 붙인다.
 
 import LinkCard from '@/components/LinkCard'
-import type { Link } from '@/lib/constants'
+import { fetchLinks } from '@/lib/db'
+import { UI_TEXT } from '@/lib/constants'
 
-const SAMPLE_LINKS: Link[] = [
-  {
-    id: 1,
-    url: 'https://example.com/a',
-    title: '제목이 한 줄인 경우',
-    summary: '요약 첫 문장입니다.\n요약 둘째 문장입니다.\n요약 셋째 문장입니다.',
-    tags: ['ai', 'nextjs', 'db'],
-    created_at: '2026-08-18T09:00:00+09:00',
-  },
-  {
-    id: 2,
-    url: 'https://example.com/b',
-    title:
-      '제목이 아주 길어서 두 줄을 넘기는 경우에는 두 줄까지만 보이고 나머지는 말줄임으로 잘려야 한다',
-    summary:
-      '요약도 아주 길어서 세 줄을 넘기는 경우에는 세 줄까지만 보이고 나머지는 말줄임으로 잘려야 한다. 카드 높이는 이 경우에도 다른 카드와 똑같이 유지되어야 한다. 그래야 격자가 어긋나지 않는다.',
-    tags: ['검색'],
-    created_at: '2026-08-17T22:30:00+09:00',
-  },
-  {
-    id: 3,
-    url: 'https://example.com/c',
-    title: '요약에 실패한 링크',
-    summary: '요약 실패',
-    tags: [],
-    created_at: '2026-08-17T10:00:00+09:00',
-  },
-  {
-    id: 4,
-    url: 'https://example.com/d',
-    title: '본문이 짧은 페이지',
-    summary: '요약 없음(본문이 짧은 페이지)',
-    tags: [],
-    created_at: '2026-08-16T08:05:00+09:00',
-  },
-  {
-    id: 5,
-    url: 'https://example.com/e',
-    title: '태그가 세 개인 링크',
-    summary: '한 문장짜리 요약도 카드 높이는 그대로다.',
-    tags: ['react', 'css', '레이아웃'],
-    created_at: '2026-08-15T13:40:00+09:00',
-  },
-]
+// 링크를 저장하면 바로 목록에 보여야 하므로 요청마다 새로 그린다.
+// 이 줄이 없으면 배포한 뒤 목록이 빌드 시점 상태로 굳는다.
+// (next.config.ts에서 cacheComponents를 켜지 않았으므로 이 설정이 유효하다)
+export const dynamic = 'force-dynamic'
 
-export default function Home() {
+export default async function Home() {
+  // hasMore는 "더 보기" 버튼(PLAN 17번)에서 쓴다.
+  const { links } = await fetchLinks()
+
   return (
     <main className="container">
       <h1 className="siteTitle">linkbox</h1>
 
-      <div className="grid">
-        {SAMPLE_LINKS.map((link) => (
-          <LinkCard key={link.id} link={link} />
-        ))}
-      </div>
+      {links.length === 0 ? (
+        // 저장된 링크가 0개일 때. 검색 결과 0건(PLAN 16번)과는 다른 문구다.
+        <div className="empty">
+          {/* 링크가 0개일 때만 보여주는 일러스트 1장 (prd_lite.md 5번) */}
+          <svg
+            className="emptyIllust"
+            width="128"
+            height="112"
+            viewBox="0 0 128 112"
+            aria-hidden="true"
+          >
+            {/* 북마크 */}
+            <path d="M54 8h20v30l-10-8-10 8V8Z" />
+            {/* 상자 뚜껑 */}
+            <rect x="16" y="52" width="96" height="18" rx="2" />
+            {/* 상자 몸통 */}
+            <path d="M24 70v30a2 2 0 0 0 2 2h76a2 2 0 0 0 2-2V70" />
+            {/* 앞면 손잡이 */}
+            <path d="M54 70h20" />
+          </svg>
+          <p className="emptyText">{UI_TEXT.emptyList}</p>
+        </div>
+      ) : (
+        <div className="grid">
+          {links.map((link) => (
+            <LinkCard key={link.id} link={link} />
+          ))}
+        </div>
+      )}
     </main>
   )
 }

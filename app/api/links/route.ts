@@ -12,11 +12,10 @@
 
 import { NextResponse, type NextRequest } from 'next/server'
 import { authorize, getClientIp, createSessionToken, sessionCookieOptions } from '@/lib/auth'
-import { db } from '@/lib/db'
+import { db, fetchLinks } from '@/lib/db'
 import { normalizeUrl } from '@/lib/url'
 import {
   ERROR_MESSAGES,
-  PAGE_SIZE,
   SESSION_COOKIE_NAME,
   type ErrorCode,
   type Link,
@@ -42,23 +41,9 @@ export async function GET(request: NextRequest) {
   const offset = Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0
 
   try {
-    // 한 개를 더 불러와서, 다음 쪽이 남았는지 판단한다.
-    const { data, error } = await db
-      .from('links')
-      .select('*')
-      .order('created_at', { ascending: false })
-      // 같은 순간에 저장된 링크는 created_at이 같아 순서가 흔들린다.
-      // id로 한 번 더 정렬해야 "더 보기"에서 빠지거나 겹치는 링크가 없다.
-      .order('id', { ascending: false })
-      .range(offset, offset + PAGE_SIZE)
-
-    if (error || !data) return fail('SERVER_ERROR', 500)
-
-    const hasMore = data.length > PAGE_SIZE
-    return NextResponse.json({
-      data: (hasMore ? data.slice(0, PAGE_SIZE) : data) as Link[],
-      hasMore,
-    })
+    // 첫 화면(app/page.tsx)과 같은 함수를 써서 정렬과 개수가 어긋나지 않게 한다.
+    const { links, hasMore } = await fetchLinks(offset)
+    return NextResponse.json({ data: links, hasMore })
   } catch {
     return fail('SERVER_ERROR', 500)
   }
