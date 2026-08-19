@@ -111,6 +111,39 @@ a {
 }
 
 /* ---------------------------------------------------------------
+   검색 줄
+   --------------------------------------------------------------- */
+
+.searchRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.searchInput {
+  flex: 1;
+  height: 40px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+}
+
+/* 저장 버튼과 달리 검색은 강조하지 않는다. 테두리만 둔다. */
+.searchButton {
+  height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+  color: var(--color-accent);
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------
    카드 격자
    최소 280px 칸을 채울 수 있는 만큼 나열한다.
    본문이 1080px일 때는 3열이고, 화면이 좁아지면 2열 → 1열로 줄어든다.

@@ -38,12 +38,17 @@ function fail(code: ErrorCode, status: number) {
  * offset: 건너뛸 개수. "더 보기"를 누를 때마다 20씩 늘려 보낸다.
  */
 export async function GET(request: NextRequest) {
-  const raw = Number(request.nextUrl.searchParams.get('offset') ?? 0)
+  const params = request.nextUrl.searchParams
+  const raw = Number(params.get('offset') ?? 0)
   const offset = Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0
 
   try {
     // 첫 화면(app/page.tsx)과 같은 함수를 써서 정렬과 개수가 어긋나지 않게 한다.
-    const { links, hasMore } = await fetchLinks(offset)
+    const { links, hasMore } = await fetchLinks({
+      offset,
+      q: params.get('q') ?? '',
+      tag: params.get('tag') ?? '',
+    })
     return NextResponse.json({ data: links, hasMore })
   } catch {
     return fail('SERVER_ERROR', 500)

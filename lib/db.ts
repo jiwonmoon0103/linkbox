@@ -28,33 +28,47 @@ export const db = createClient(url, serviceRoleKey, {
   },
 })
 
+export type LinkQuery = {
+  /** 건너뛸 개수. "더 보기"를 누를 때마다 20씩 늘려 보낸다. */
+  offset?: number
+  /** 검색어. 제목·요약·태그 세 곳을 함께 뒤진다. */
+  q?: string
+  /** 태그 필터. 정확히 일치하는 태그만 남긴다. */
+  tag?: string
+}
+
 /**
- * 링크 목록을 최신순으로 PAGE_SIZE(20)개씩 읽는다.
- * 첫 화면(서버 컴포넌트)과 "더 보기"(GET /api/links)가 같은 함수를 쓴다.
- * 두 곳에 같은 질의를 따로 적으면 정렬이나 개수가 어긋나기 때문이다.
+ * 링크를 최신순으로 PAGE_SIZE(20)개씩 읽는다.
+ * 목록, 검색, 태그 필터가 전부 이 함수 하나를 쓴다.
  *
- * @param offset 건너뛸 개수. "더 보기"를 누를 때마다 20씩 늘려 보낸다.
+ * 검색과 필터는 DB의 search_links 함수가 처리한다.
+ *   - tags가 배열이라 ILIKE를 직접 걸 수 없어 DB 함수로 처리한다
+ *   - 이미 불러온 20개 안에서 거르지 않으므로 21번째 이후도 찾힌다
+ *   - 검색어와 태그가 함께 오면 두 조건을 모두 만족하는 것만 남긴다(AND)
+ *
+ * AI는 부르지 않는다. 검색은 DB 텍스트 검색만 쓴다. (PRD.md 5번 2))
  */
-export async function fetchLinks(
-  offset = 0
-): Promise<{ links: Link[]; hasMore: boolean }> {
+export async function fetchLinks({
+  offset = 0,
+  q = '',
+  tag = '',
+}: LinkQuery = {}): Promise<{ links: Link[]; hasMore: boolean }> {
   // 한 개를 더 불러와서, 다음 쪽이 남았는지 판단한다.
-  const { data, error } = await db
-    .from('links')
-    .select('*')
-    .order('created_at', { ascending: false })
-    // 같은 순간에 저장된 링크는 created_at이 같아 순서가 흔들린다.
-    // id로 한 번 더 정렬해야 "더 보기"에서 빠지거나 겹치는 링크가 없다.
-    .order('id', { ascending: false })
-    .range(offset, offset + PAGE_SIZE)
+  const { data, error } = await db.rpc('search_links', {
+    p_q: q,
+    p_tag: tag,
+    p_limit: PAGE_SIZE + 1,
+    p_offset: offset,
+  })
 
   if (error || !data) {
     throw new Error('links 테이블을 읽지 못했습니다.')
   }
 
-  const hasMore = data.length > PAGE_SIZE
+  const rows = data as Link[]
+  const hasMore = rows.length > PAGE_SIZE
   return {
-    links: (hasMore ? data.slice(0, PAGE_SIZE) : data) as Link[],
+    links: hasMore ? rows.slice(0, PAGE_SIZE) : rows,
     hasMore,
   }
 }

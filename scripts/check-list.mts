@@ -29,12 +29,18 @@ if (command === 'seed') {
     tags: i % 3 === 0 ? [] : ['ai', 'nextjs', '검색'].slice(0, (i % 3) + 1),
   }))
 
-  const { data, error } = await db.from('links').insert(rows).select('id')
-  if (error) {
-    console.error('❌ 넣기 실패:', error.message)
-    process.exit(1)
+  // 한 번에 넣으면 created_at이 전부 같아져 순서가 흔들린다.
+  // 실제 사용처럼 하나씩 넣어 저장 시각을 다르게 한다.
+  let 넣은수 = 0
+  for (const row of rows) {
+    const { error } = await db.from('links').insert(row)
+    if (error) {
+      console.error('❌ 넣기 실패:', error.message)
+      process.exit(1)
+    }
+    넣은수 += 1
   }
-  console.log('✅ 테스트 링크', data.length, '건 넣음')
+  console.log('✅ 테스트 링크', 넣은수, '건 넣음')
 } else if (command === 'clean') {
   const { data, error } = await db
     .from('links')
