@@ -31,6 +31,8 @@ export default function LinkList({
   const [links, setLinks] = useState(initialLinks)
   const [hasMore, setHasMore] = useState(initialHasMore)
   const [loading, setLoading] = useState(false)
+  // "더 보기"가 실패했을 때 보여줄 문구. 조용히 넘어가면 사용자가 이유를 모른다.
+  const [loadError, setLoadError] = useState('')
 
   // 서버가 목록을 다시 그려 보내면 그것으로 맞춘다.
   // 링크를 저장한 뒤 SaveForm이 화면을 새로 그리게 하는데(router.refresh),
@@ -81,7 +83,12 @@ export default function LinkList({
 
       if (response.ok) {
         // 지운 카드를 목록에서 뺀다.
-        setLinks((prev) => prev.filter((l) => l.id !== pending.id))
+        setLinks((prev) => {
+          const 남은목록 = prev.filter((l) => l.id !== pending.id)
+          // 마지막 한 장을 지웠는데 버튼이 남아 있으면 눌러도 0건이 온다.
+          if (남은목록.length === 0) setHasMore(false)
+          return 남은목록
+        })
         setPassed(true) // 통과했으니 다음 삭제부터는 묻지 않는다
         closeDialog()
         return
@@ -99,6 +106,7 @@ export default function LinkList({
   async function loadMore() {
     if (loading) return
     setLoading(true)
+    setLoadError('')
 
     try {
       // 지금까지 받은 개수만큼 건너뛰고 그다음 20개를 받는다.
@@ -108,13 +116,17 @@ export default function LinkList({
       if (tag) params.set('tag', tag)
 
       const response = await fetch(`/api/links?${params.toString()}`)
-      if (!response.ok) return
+      if (!response.ok) {
+        setLoadError(ERROR_MESSAGES.SERVER_ERROR)
+        return
+      }
 
       const body = (await response.json()) as { data: Link[]; hasMore: boolean }
       setLinks((prev) => [...prev, ...body.data])
       setHasMore(body.hasMore)
     } catch {
       // 인터넷이 끊긴 경우 등. 버튼은 그대로 남아 다시 누를 수 있다.
+      setLoadError(ERROR_MESSAGES.SERVER_ERROR)
     } finally {
       setLoading(false)
     }
@@ -143,6 +155,11 @@ export default function LinkList({
           >
             {UI_TEXT.loadMore}
           </button>
+          {loadError && (
+            <p className="loadMoreError" role="alert">
+              {loadError}
+            </p>
+          )}
         </div>
       )}
 

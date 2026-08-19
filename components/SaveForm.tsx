@@ -9,7 +9,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ERROR_MESSAGES, UI_TEXT } from '@/lib/constants'
+import { ERROR_MESSAGES, UI_TEXT, type Link } from '@/lib/constants'
 
 export default function SaveForm({ hasSession }: { hasSession: boolean }) {
   const router = useRouter()
@@ -18,6 +18,8 @@ export default function SaveForm({ hasSession }: { hasSession: boolean }) {
   const [password, setPassword] = useState('')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  // 이미 저장된 링크일 때 서버가 함께 내려주는 기존 카드
+  const [duplicate, setDuplicate] = useState<Link | null>(null)
 
   // 입력창이 비어 있거나 저장 중이면 버튼이 눌리지 않는다.
   const disabled = url.trim() === '' || saving
@@ -28,6 +30,7 @@ export default function SaveForm({ hasSession }: { hasSession: boolean }) {
 
     setSaving(true)
     setMessage('')
+    setDuplicate(null)
 
     try {
       const response = await fetch('/api/links', {
@@ -43,12 +46,19 @@ export default function SaveForm({ hasSession }: { hasSession: boolean }) {
         // 비밀번호로 통과했다면 쿠키가 생겨 비밀번호 칸도 사라진다.
         setUrl('')
         setPassword('')
+        setDuplicate(null)
         router.refresh()
         return
       }
 
       // 실패 문구는 서버가 내려준 것을 그대로 쓴다. (문구 원본은 lib/constants.ts)
       setMessage(body?.error?.message ?? ERROR_MESSAGES.SERVER_ERROR)
+
+      // 이미 저장된 링크면 서버가 기존 카드를 함께 내려준다.
+      // 어떤 링크와 겹쳤는지 보여줘야 사용자가 상황을 안다. (DESIGN.md 8번)
+      if (body?.error?.code === 'DUPLICATE' && body?.data) {
+        setDuplicate(body.data as Link)
+      }
     } catch {
       // 인터넷이 끊긴 경우 등. 버튼은 아래 finally에서 원래대로 돌아온다.
       setMessage(ERROR_MESSAGES.SERVER_ERROR)
@@ -90,6 +100,17 @@ export default function SaveForm({ hasSession }: { hasSession: boolean }) {
       {message && (
         <p className="saveMessage" role="alert">
           {message}
+          {/* 겹친 링크가 무엇인지 함께 보여준다. 눌러서 바로 열 수 있다. */}
+          {duplicate && (
+            <a
+              className="saveDuplicate"
+              href={duplicate.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {duplicate.title || duplicate.url}
+            </a>
+          )}
         </p>
       )}
     </form>
