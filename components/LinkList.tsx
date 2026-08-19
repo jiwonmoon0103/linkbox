@@ -12,22 +12,75 @@
 import { useState } from 'react'
 import LinkCard from '@/components/LinkCard'
 // 한 번에 몇 개를 가져올지는 서버가 정한다. 여기서 개수를 다시 세지 않는다.
-import { UI_TEXT, type Link } from '@/lib/constants'
+import { ERROR_MESSAGES, UI_TEXT, type Link } from '@/lib/constants'
 
 export default function LinkList({
   initialLinks,
   initialHasMore,
   query,
   tag,
+  hasSession,
 }: {
   initialLinks: Link[]
   initialHasMore: boolean
   query: string
   tag: string
+  /** 1시간 안에 비밀번호를 통과했는지. 확인창에서 비밀번호를 받을지 정한다. */
+  hasSession: boolean
 }) {
   const [links, setLinks] = useState(initialLinks)
   const [hasMore, setHasMore] = useState(initialHasMore)
   const [loading, setLoading] = useState(false)
+
+  // 삭제 확인창 상태. pending이 있으면 확인창이 열려 있다.
+  const [pending, setPending] = useState<Link | null>(null)
+  const [password, setPassword] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+
+  // 이번 화면에서 비밀번호를 통과했는지. 서버가 쿠키를 내려주면 다시 묻지 않는다.
+  const [passed, setPassed] = useState(hasSession)
+
+  function askDelete(link: Link) {
+    setPending(link)
+    setPassword('')
+    setDeleteError('')
+  }
+
+  function closeDialog() {
+    setPending(null)
+    setPassword('')
+    setDeleteError('')
+  }
+
+  async function confirmDelete() {
+    if (!pending || deleting) return
+    setDeleting(true)
+    setDeleteError('')
+
+    try {
+      const response = await fetch(`/api/links/${pending.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: password || undefined }),
+      })
+
+      if (response.ok) {
+        // 지운 카드를 목록에서 뺀다.
+        setLinks((prev) => prev.filter((l) => l.id !== pending.id))
+        setPassed(true) // 통과했으니 다음 삭제부터는 묻지 않는다
+        closeDialog()
+        return
+      }
+
+      const body = await response.json()
+      setDeleteError(body?.error?.message ?? ERROR_MESSAGES.SERVER_ERROR)
+    } catch {
+      setDeleteError(ERROR_MESSAGES.SERVER_ERROR)
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   async function loadMore() {
     if (loading) return
@@ -57,7 +110,12 @@ export default function LinkList({
     <>
       <div className="grid">
         {links.map((link) => (
-          <LinkCard key={link.id} link={link} query={query} />
+          <LinkCard
+            key={link.id}
+            link={link}
+            query={query}
+            onDeleteClick={askDelete}
+          />
         ))}
       </div>
 
@@ -71,6 +129,55 @@ export default function LinkList({
           >
             {UI_TEXT.loadMore}
           </button>
+        </div>
+      )}
+
+      {/* 삭제 확인창. 지우기 직전에 한 번 묻는다. (PRD.md 5번 1)) */}
+      {pending && (
+        <div className="dialogBack">
+          <div className="dialog" role="dialog" aria-modal="true">
+            <p className="dialogText">{UI_TEXT.deleteConfirm}</p>
+            <p className="dialogTarget">{pending.title || pending.url}</p>
+
+            {/* 아직 통과하지 않았으면 여기서 비밀번호도 함께 받는다. */}
+            {!passed && (
+              <input
+                className="dialogPassword"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="비밀번호"
+                aria-label="비밀번호"
+                disabled={deleting}
+                autoFocus
+              />
+            )}
+
+            {deleteError && (
+              <p className="dialogError" role="alert">
+                {deleteError}
+              </p>
+            )}
+
+            <div className="dialogButtons">
+              <button
+                className="dialogCancel"
+                type="button"
+                onClick={closeDialog}
+                disabled={deleting}
+              >
+                취소
+              </button>
+              <button
+                className="dialogDelete"
+                type="button"
+                onClick={confirmDelete}
+                disabled={deleting}
+              >
+                삭제
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </>

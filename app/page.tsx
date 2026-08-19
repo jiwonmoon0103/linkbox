@@ -98,6 +98,7 @@ export default async function Home({ searchParams }: PageProps<'/'>) {
           initialHasMore={hasMore}
           query={q}
           tag={tag}
+          hasSession={hasSession}
         />
       )}
     </main>

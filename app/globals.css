@@ -249,10 +249,119 @@ a {
   z-index: 1;
 }
 
-.cardDate {
+.cardBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-top: 8px;
+}
+
+.cardDate {
   font-size: 12px;
   color: color-mix(in srgb, var(--color-text) 65%, transparent);
+}
+
+/* 삭제 버튼도 카드를 덮은 제목 링크보다 위에 있어야 먼저 잡힌다. */
+.cardDelete {
+  position: relative;
+  z-index: 1;
+  font-size: 12px;
+  color: var(--color-accent);
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------
+   삭제 확인창
+   --------------------------------------------------------------- */
+
+.dialogBack {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--color-text) 40%, transparent);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 360px;
+  padding: 24px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+}
+
+.dialogText {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* 무엇을 지우는지 보여준다. 한 줄만 보이고 넘치면 말줄임. */
+.dialogTarget {
+  margin-top: 8px;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--color-text) 65%, transparent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dialogPassword {
+  width: 100%;
+  height: 40px;
+  margin-top: 16px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+}
+
+.dialogError {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--color-accent);
+}
+
+.dialogButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.dialogCancel,
+.dialogDelete {
+  height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.dialogCancel {
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+}
+
+.dialogDelete {
+  color: var(--color-bg);
+  background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+}
+
+.dialogCancel:disabled,
+.dialogDelete:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 /* ---------------------------------------------------------------
