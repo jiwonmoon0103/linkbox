@@ -89,13 +89,15 @@ export function trimTags(tags: unknown): string[] {
 // 2. AI 호출 (링크 1건당 여기 1회뿐)
 // ---------------------------------------------------------------
 
+// 숫자를 글로 적지 않고 상수에서 끌어온다.
+// 규칙이 바뀌면 lib/constants.ts만 고쳐도 지시문이 따라온다.
 const SYSTEM_PROMPT = `너는 웹페이지를 정리해주는 도우미다. 아래 규칙을 반드시 지켜 JSON만 답한다.
 
-- summary: 한국어 문장 3개 이하의 배열. 각 문장은 60자를 넘기지 않는다. 페이지 내용만 근거로 쓰고 지어내지 않는다.
-- tags: 내용을 대표하는 태그 3개 이하의 배열. 각 태그는 10자를 절대 넘기지 않는다. 10자가 넘으면 뒤가 잘려 뜻이 사라지므로 짧은 한국어 낱말을 우선 쓴다. 공백을 넣지 않고, 영어는 소문자로 쓴다.
+- summary: 한국어 문장 ${MAX_SUMMARY_SENTENCES}개 이하의 배열. 각 문장은 ${MAX_SENTENCE_CHARS}자를 넘기지 않는다. 페이지 내용만 근거로 쓰고 지어내지 않는다.
+- tags: 내용을 대표하는 태그 ${MAX_TAGS}개 이하의 배열. 각 태그는 ${MAX_TAG_CHARS}자를 절대 넘기지 않는다. ${MAX_TAG_CHARS}자가 넘으면 뒤가 잘려 뜻이 사라지므로 짧은 한국어 낱말을 우선 쓴다. 공백을 넣지 않고, 영어는 소문자로 쓴다.
   좋은 예: ["머신러닝", "ai", "통계"]  나쁜 예: ["machinelearning", "artificialintelligence"]
 - titleIsUseful: 주어진 제목이 페이지 내용을 알 수 있게 해주면 true, 비어 있거나 "홈"처럼 내용을 알 수 없으면 false.
-- title: titleIsUseful이 false일 때만 내용을 근거로 30자 이내의 제목을 짓는다. true면 빈 문자열로 둔다.
+- title: titleIsUseful이 false일 때만 내용을 근거로 짧은 제목을 짓는다. true면 빈 문자열로 둔다.
 
 답은 {"summary": [], "tags": [], "titleIsUseful": true, "title": ""} 모양의 JSON 하나여야 한다.`
 
