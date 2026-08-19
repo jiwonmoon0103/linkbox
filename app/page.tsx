@@ -27,6 +27,9 @@ export default async function Home({ searchParams }: PageProps<'/'>) {
   const q = typeof params.q === 'string' ? params.q : ''
   const tag = typeof params.tag === 'string' ? params.tag : ''
 
+  // 검색어나 태그로 거르는 중인가. 0건일 때 보여줄 문구가 달라진다.
+  const isFiltering = q !== '' || tag !== ''
+
   // hasMore는 "더 보기" 버튼(PLAN 17번)에서 쓴다.
   // 검색어와 태그가 함께 오면 둘 다 만족하는 것만 남는다(AND).
   const { links } = await fetchLinks({ q, tag })
@@ -56,8 +59,17 @@ export default async function Home({ searchParams }: PageProps<'/'>) {
         </p>
       )}
 
-      {links.length === 0 ? (
-        // 저장된 링크가 0개일 때. 검색 결과 0건(PLAN 16번)과는 다른 문구다.
+      {links.length === 0 && isFiltering ? (
+        // 검색이나 태그로 거른 결과가 0건일 때.
+        // 저장된 링크가 아예 없는 경우와 구분해서 보여준다. (PRD.md 5번 2))
+        <div className="empty">
+          <p className="emptyText">{UI_TEXT.emptySearch}</p>
+          <Link className="clearSearch" href="/">
+            {UI_TEXT.clearSearch}
+          </Link>
+        </div>
+      ) : links.length === 0 ? (
+        // 저장된 링크가 하나도 없을 때. 일러스트는 이 경우에만 보여준다.
         <div className="empty">
           {/* 링크가 0개일 때만 보여주는 일러스트 1장 (prd_lite.md 5번) */}
           <svg

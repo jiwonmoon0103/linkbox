@@ -279,3 +279,12 @@ a {
 .emptyText {
   font-size: 15px;
 }
+
+/* 검색 결과가 0건일 때 함께 보여주는 지우기 버튼 */
+.clearSearch {
+  font-size: 14px;
+  color: var(--color-accent);
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  padding: 8px 16px;
+}
