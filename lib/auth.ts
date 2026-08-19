@@ -120,27 +120,20 @@ export async function isBlocked(
   return new Date(data.blocked_until).getTime() > now
 }
 
-/** 비밀번호를 틀렸을 때 기록한다. 5회가 되면 10분간 차단한다. */
-export async function recordFailure(
-  ip: string,
-  now: number = Date.now()
-): Promise<void> {
-  const { data } = await db
-    .from('login_attempts')
-    .select('fail_count')
-    .eq('ip', ip)
-    .maybeSingle()
-
-  const failCount = (data?.fail_count ?? 0) + 1
-  const reachedLimit = failCount >= MAX_FAILED_ATTEMPTS
-
-  await db.from('login_attempts').upsert({
-    ip,
-    fail_count: reachedLimit ? 0 : failCount, // 차단했으면 횟수를 다시 0부터 센다
-    last_failed_at: new Date(now).toISOString(),
-    blocked_until: reachedLimit
-      ? new Date(now + BLOCK_DURATION_MS).toISOString()
-      : null,
+/**
+ * 비밀번호를 틀렸을 때 기록한다. 5회가 되면 10분간 차단한다.
+ *
+ * 세는 일은 DB의 record_failure 함수가 한다. 여기서 읽고 더해서 쓰면
+ * 요청이 동시에 올 때 전부 같은 값을 읽어 횟수가 제대로 오르지 않는다.
+ * (실제로 30번을 한꺼번에 틀려도 4까지밖에 오르지 않았다)
+ *
+ * 5회와 10분은 여기 상수에서 넘긴다. SQL에 또 적으면 두 곳이 어긋난다.
+ */
+export async function recordFailure(ip: string): Promise<void> {
+  await db.rpc('record_failure', {
+    p_ip: ip,
+    p_max_attempts: MAX_FAILED_ATTEMPTS,
+    p_block_seconds: BLOCK_DURATION_MS / 1000,
   })
 }
 
@@ -184,7 +177,7 @@ export async function authorize(params: {
     return { ok: true, issueCookie: true }
   }
 
-  await recordFailure(params.ip, now)
+  await recordFailure(params.ip)
   // 이번 실패로 차단됐다면 그 사실을 바로 알려준다.
   if (await isBlocked(params.ip, now)) {
     return { ok: false, code: 'BLOCKED' }
