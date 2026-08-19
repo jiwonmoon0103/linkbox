@@ -145,6 +145,8 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
 /** 화면에 그대로 쓰는 안내 문구 */
 export const UI_TEXT = {
   saving: '저장 중...',
+  /** 저장하는 동안 보여주는 안내. 몇 초 걸리는 일이라 무엇을 하는 중인지 알린다. */
+  savingHint: '페이지를 읽고 요약을 만드는 중입니다',
   emptyList: '아직 저장된 링크가 없습니다. 위에 주소를 붙여넣어 보세요.',
   emptySearch: '찾는 검색어와 일치하는 링크가 없습니다.',
   clearSearch: '검색 지우기',

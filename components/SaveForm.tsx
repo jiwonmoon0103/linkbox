@@ -7,7 +7,7 @@
 // 비밀 키를 쓰는 일(DB 접근, 비밀번호 대조)은 전부 서버가 하고,
 // 여기서는 POST /api/links를 부르고 결과 문구만 보여준다.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ERROR_MESSAGES, UI_TEXT, type Link } from '@/lib/constants'
 
@@ -20,6 +20,17 @@ export default function SaveForm({ hasSession }: { hasSession: boolean }) {
   const [message, setMessage] = useState('')
   // 이미 저장된 링크일 때 서버가 함께 내려주는 기존 카드
   const [duplicate, setDuplicate] = useState<Link | null>(null)
+  // 저장을 시작한 뒤 흐른 시간(초). 몇 초 걸리는 일이라 멈춘 것처럼 보이지 않게 한다.
+  const [elapsed, setElapsed] = useState(0)
+
+  // 저장하는 동안에만 1초마다 센다. 끝나면 시계를 치운다.
+  // 0으로 되돌리는 일은 저장을 시작하는 곳에서 한다.
+  // 여기서 setState를 바로 부르면 그릴 때마다 다시 그려져 낭비가 된다.
+  useEffect(() => {
+    if (!saving) return
+    const timer = setInterval(() => setElapsed((n) => n + 1), 1000)
+    return () => clearInterval(timer)
+  }, [saving])
 
   // 입력창이 비어 있거나 저장 중이면 버튼이 눌리지 않는다.
   const disabled = url.trim() === '' || saving
@@ -31,6 +42,7 @@ export default function SaveForm({ hasSession }: { hasSession: boolean }) {
     setSaving(true)
     setMessage('')
     setDuplicate(null)
+    setElapsed(0)
 
     try {
       const response = await fetch('/api/links', {
@@ -95,6 +107,14 @@ export default function SaveForm({ hasSession }: { hasSession: boolean }) {
       <button className="saveButton" type="submit" disabled={disabled}>
         {saving ? UI_TEXT.saving : '저장'}
       </button>
+
+      {/* 저장하는 동안 무엇을 하는 중인지와 흐른 시간을 보여준다. (DESIGN.md 2.1) */}
+      {saving && (
+        <p className="saveHint" role="status">
+          {UI_TEXT.savingHint}
+          {elapsed > 0 && ` (${elapsed}초)`}
+        </p>
+      )}
 
       {/* 안내 문구 자리 — "이미 저장된 링크입니다" 등이 여기 뜬다. */}
       {message && (
