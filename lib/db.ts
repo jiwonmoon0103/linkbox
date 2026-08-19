@@ -8,7 +8,12 @@
 import { createClient } from '@supabase/supabase-js'
 // lib 안에서는 상대 경로로 가져온다. scripts/의 확인용 스크립트를 node로 직접
 // 실행할 때 '@/' 별칭을 해석하지 못하기 때문이다.
-import { PAGE_SIZE, type Link } from './constants.ts'
+import {
+  MAX_OFFSET,
+  MAX_QUERY_CHARS,
+  PAGE_SIZE,
+  type Link,
+} from './constants.ts'
 
 const url = process.env.SUPABASE_URL
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -48,17 +53,36 @@ export type LinkQuery = {
  *
  * AI는 부르지 않는다. 검색은 DB 텍스트 검색만 쓴다. (PRD.md 5번 2))
  */
+/**
+ * 검색어를 DB에 넘기기 전에 다듬는다.
+ *
+ * 두 가지를 한다.
+ *   1) 길이를 자른다 — 목록 조회는 누구나 부를 수 있어 상한이 필요하다
+ *   2) %와 _를 글자 그대로 찾도록 표시한다
+ *      DB가 쓰는 ILIKE에서 %는 "아무 글자나", _는 "한 글자"를 뜻한다.
+ *      그대로 두면 "%"로 검색했을 때 전부 나오고, "할인 50%"를 찾을 수 없다.
+ *      앞에 \를 붙이면 글자 그대로 찾는다. (\ 자신도 붙여줘야 한다)
+ */
+function sanitizeQuery(q: string): string {
+  return q.trim().slice(0, MAX_QUERY_CHARS).replace(/[\\%_]/g, '\\$&')
+}
+
 export async function fetchLinks({
   offset = 0,
   q = '',
   tag = '',
 }: LinkQuery = {}): Promise<{ links: Link[]; hasMore: boolean }> {
+  // 태그는 정확히 같은 것만 찾으므로(= any) 와일드카드 표시가 필요 없다.
+  // 길이만 자른다.
+  const safeTag = tag.trim().slice(0, MAX_QUERY_CHARS)
+  const safeOffset = Math.min(Math.max(0, Math.floor(offset) || 0), MAX_OFFSET)
+
   // 한 개를 더 불러와서, 다음 쪽이 남았는지 판단한다.
   const { data, error } = await db.rpc('search_links', {
-    p_q: q,
-    p_tag: tag,
+    p_q: sanitizeQuery(q),
+    p_tag: safeTag,
     p_limit: PAGE_SIZE + 1,
-    p_offset: offset,
+    p_offset: safeOffset,
   })
 
   if (error || !data) {
