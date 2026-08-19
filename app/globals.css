@@ -256,6 +256,32 @@ a {
 }
 
 /* ---------------------------------------------------------------
+   더 보기
+   --------------------------------------------------------------- */
+
+.loadMoreRow {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.loadMoreButton {
+  height: 40px;
+  padding: 0 24px;
+  font-size: 14px;
+  color: var(--color-accent);
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.loadMoreButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ---------------------------------------------------------------
    저장된 링크가 0개일 때
    --------------------------------------------------------------- */
 

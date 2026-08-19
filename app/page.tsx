@@ -10,7 +10,7 @@
 
 import { cookies } from 'next/headers'
 import Link from 'next/link'
-import LinkCard from '@/components/LinkCard'
+import LinkList from '@/components/LinkList'
 import SaveForm from '@/components/SaveForm'
 import SearchBar from '@/components/SearchBar'
 import { fetchLinks } from '@/lib/db'
@@ -30,9 +30,8 @@ export default async function Home({ searchParams }: PageProps<'/'>) {
   // 검색어나 태그로 거르는 중인가. 0건일 때 보여줄 문구가 달라진다.
   const isFiltering = q !== '' || tag !== ''
 
-  // hasMore는 "더 보기" 버튼(PLAN 17번)에서 쓴다.
   // 검색어와 태그가 함께 오면 둘 다 만족하는 것만 남는다(AND).
-  const { links } = await fetchLinks({ q, tag })
+  const { links, hasMore } = await fetchLinks({ q, tag })
 
   // 쿠키는 HttpOnly라 브라우저 스크립트가 읽지 못한다.
   // 그래서 서버가 확인해 비밀번호 칸을 보여줄지 말지만 알려준다.
@@ -91,11 +90,15 @@ export default async function Home({ searchParams }: PageProps<'/'>) {
           <p className="emptyText">{UI_TEXT.emptyList}</p>
         </div>
       ) : (
-        <div className="grid">
-          {links.map((link) => (
-            <LinkCard key={link.id} link={link} query={q} />
-          ))}
-        </div>
+        // 첫 20개는 여기서 서버가 그리고, "더 보기"부터는 LinkList가 이어붙인다.
+        // 검색어나 태그가 바뀌면 key가 달라져 이어붙이던 것을 버리고 다시 센다.
+        <LinkList
+          key={`${q}|${tag}`}
+          initialLinks={links}
+          initialHasMore={hasMore}
+          query={q}
+          tag={tag}
+        />
       )}
     </main>
   )
