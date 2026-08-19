@@ -1,36 +1,119 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# linkbox
 
-## Getting Started
+나중에 볼 링크를 붙여넣기만 하면 **AI가 요약과 태그를 붙여 정리해주는 개인용 링크 보관함**입니다.
 
-First, run the development server:
+## 왜 만들었나
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+링크는 저장하기 쉽지만 다시 찾아 열어보는 일은 드뭅니다. 저장된 것이 URL과 페이지 제목뿐이라, 목록을 봐도 그게 무슨 내용이었는지 떠오르지 않기 때문입니다.
+
+linkbox는 저장하는 순간 페이지를 읽어 **3줄 요약과 태그 3개**를 붙여 둡니다. 나중에 목록만 훑어도 내용이 떠오르고, 제목·요약·태그 어디에 있는 낱말로든 찾을 수 있습니다.
+
+## 무엇을 하나
+
+- **저장** — 주소를 붙여넣으면 페이지를 읽어 제목·3줄 요약·태그를 붙여 저장합니다
+- **목록** — 저장한 링크를 최신순 격자로 보여줍니다 (20개씩, "더 보기")
+- **검색** — 제목·요약·태그를 함께 뒤집니다. 태그를 눌러 걸러 볼 수도 있습니다
+- **삭제** — 확인을 한 번 받고 지웁니다
+
+읽는 것은 주소를 아는 누구나 할 수 있고, **저장과 삭제만 비밀번호로 잠겨 있습니다.** 회원가입은 없습니다.
+
+## 스스로 정한 규칙
+
+만드는 내내 지킨 규칙들입니다. 숫자는 전부 [`lib/constants.ts`](lib/constants.ts) 한 곳에서 관리합니다.
+
+| 규칙 | 값 |
+|---|---|
+| 페이지 가져오기 제한 시간 | 15초 (넘으면 "요약 실패") |
+| AI에 넘기는 본문 | 앞에서부터 5,000자 |
+| 본문이 이보다 짧으면 AI를 부르지 않음 | 200자 ("요약 없음") |
+| 요약 | 한국어 3문장 이내, 문장당 60자 |
+| 태그 | 3개 이내, 공백 없이 10자 이내 |
+| 목록 | 한 번에 20개 |
+| **AI 호출** | **링크 1건당 정확히 1회** (목록·검색에서는 0회) |
+
+**요약을 지어내지 않습니다.** 페이지를 읽지 못하면 "요약 실패", 본문이 너무 짧으면 "요약 없음(본문이 짧은 페이지)"으로 남기고 URL과 제목은 보존합니다.
+
+## 기술 구성
+
+- **Next.js 16** (App Router, TypeScript) — 화면과 서버 기능을 한 프로젝트에서
+- **Supabase (PostgreSQL)** — 링크 저장. RLS를 켜고 **서버 전용 키로만** 접근
+- **OpenAI gpt-4o-mini** — 요약과 태그 생성
+- **cheerio** — 웹페이지에서 본문만 추출
+
+브라우저는 데이터베이스에 직접 접속하지 않습니다. 읽기와 쓰기 모두 서버 코드(Route Handler)를 거칩니다.
+
+## 파일 구조
+
+```
+app/
+  page.tsx                화면 1개 (저장 줄 + 검색 줄 + 카드 격자)
+  error.tsx               목록을 불러오지 못했을 때
+  api/links/route.ts      저장(POST) + 목록·검색(GET)
+  api/links/[id]/route.ts 삭제(DELETE)
+components/
+  LinkCard.tsx            카드 1개
+  SaveForm.tsx            저장 줄
+  SearchBar.tsx           검색 줄
+  LinkList.tsx            카드 격자 + "더 보기"
+lib/
+  constants.ts            고정 숫자와 문구 (규칙이 사는 곳)
+  db.ts                   Supabase 연결과 목록·검색 질의
+  fetchPage.ts            페이지 가져오기 + 본문 추출
+  ai.ts                   요약·태그 생성
+  buildLink.ts            저장할 한 줄 만들기
+  auth.ts                 비밀번호 확인, 서명 쿠키, 5회 실패 차단
+  url.ts                  주소 검사와 정규화
+scripts/                  확인용 스크립트
+supabase/migrations/      DB 구조
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 보안
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+배포 전에 점검하고 고친 것들입니다. 자세한 내용은 [CHECK.md](CHECK.md)에 있습니다.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- 비밀 키는 서버에서만 쓰고 브라우저로 내려보내지 않습니다 (`server-only` 가드)
+- 사용자가 준 주소로 **내부망에 요청을 보내지 못하게** 막습니다 (리다이렉트도 홉마다 검사)
+- 페이지 응답은 2MB까지만 받습니다
+- 비밀번호 5회 실패 시 10분 차단 (DB에서 원자적으로 셈)
+- 접속자 구분은 IP 자체가 아니라 **되돌릴 수 없게 변환한 값**으로 하고 30일 뒤 지웁니다
+- 외부 페이지 글은 구분자로 감싸 **프롬프트 인젝션**을 완화합니다
+- 목록은 검색엔진에 올리지 않습니다 (`noindex`)
 
-## Learn More
+## 직접 돌려보려면
 
-To learn more about Next.js, take a look at the following resources:
+`.env` 파일에 아래 값이 필요합니다. **이 저장소에는 포함되어 있지 않습니다.**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+OPENAI_API_KEY=
+ADMIN_PASSWORD=
+SESSION_SECRET=
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm install
+npm run dev
+```
 
-## Deploy on Vercel
+DB 구조는 `supabase/migrations/`에 있습니다. Supabase CLI로 적용합니다.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+확인용 스크립트는 `--conditions=react-server`를 붙여 실행합니다. (`lib/`에 `server-only`가 걸려 있기 때문입니다)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+node --conditions=react-server --env-file=.env scripts/check-db.mts
+```
+
+## 문서
+
+| 문서 | 내용 |
+|---|---|
+| [PRD.md](PRD.md) | 기획서. 모든 결정의 근거 |
+| [PLAN.md](PLAN.md) | 작업 순서와 성공 기준 |
+| [DESIGN.md](DESIGN.md) | 화면 구성, 데이터 흐름, 파일 구조 |
+| [CHECK.md](CHECK.md) | 점검 결과 (성공 기준 판정, 설계 대비 차이, 보안) |
+| [CLAUDE.md](CLAUDE.md) | 이 저장소에서 작업할 때 지키는 규칙 |
+
+---
+
+만든 사람: 문지원
