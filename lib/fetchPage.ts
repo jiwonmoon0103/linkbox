@@ -239,14 +239,31 @@ export async function fetchPage(url: string): Promise<PageResult> {
 
   const $ = cheerio.load(html)
 
-  // 제목은 페이지의 title을 그대로 쓴다. 비어 있으면 부른 쪽에서 처리한다.
-  // 다만 길이는 여기서 자른다. 남이 만든 값이라 얼마든지 길 수 있고,
+  /** 페이지가 스스로 밝힌 값을 읽는다. 없으면 빈 문자열. */
+  const meta = (selector: string) =>
+    ($(selector).attr('content') ?? '').replace(/\s+/g, ' ').trim()
+
+  // 제목은 페이지의 title을 그대로 쓰고, 비어 있으면 og:title을 쓴다.
+  // 길이는 여기서 자른다. 남이 만든 값이라 얼마든지 길 수 있고,
   // 이 값이 그대로 AI 요청에 실리기 때문이다.
-  const title = $('title').first().text().trim().slice(0, MAX_TITLE_CHARS)
+  const title = ($('title').first().text().trim() ||
+    meta('meta[property="og:title"]')).slice(0, MAX_TITLE_CHARS)
+
+  // 페이지가 밝힌 설명. 유튜브처럼 내용이 화면이 아니라 여기에 담긴 곳이 있다.
+  // 화면에서 걷어낸 글자는 메뉴뿐이라 그것만 보면 엉뚱한 요약이 나온다.
+  const description =
+    meta('meta[property="og:description"]') || meta('meta[name="description"]')
 
   $(NOISE_SELECTOR).remove()
   // 줄바꿈과 연속 공백을 한 칸으로 눌러 글자 수를 실제 분량에 맞춘다.
-  const text = $('body').text().replace(/\s+/g, ' ').trim()
+  const bodyText = $('body').text().replace(/\s+/g, ' ').trim()
+
+  // 설명을 앞에 둔다. 5,000자에서 잘리더라도 핵심이 먼저 들어가게 하려는 것이다.
+  // 본문에 이미 같은 문장이 있으면 두 번 넣지 않는다.
+  const text =
+    description && !bodyText.includes(description)
+      ? `${description} ${bodyText}`.trim()
+      : bodyText
 
   return {
     ok: true,
